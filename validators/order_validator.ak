@@ -17,9 +17,9 @@ validator(
   // the Stake Credential of Expired Order Cancellation Validator
   expired_order_cancel_credential: StakeCredential,
 ) {
-  fn validate_order(raw_datum: Data, raw_redeemer: Data, context: ScriptContext) {
+  fn validate_order(raw_datum: Data, raw_redeemer: Data, context: ScriptContext, output_reference: OutputReference) {
     let ScriptContext { transaction, purpose } = context
-    expect Spend(_) = purpose
+    expect Spend(output_reference) = purpose
     expect redeemer: OrderRedeemer = raw_redeemer
     when redeemer is {
       ApplyOrder -> {
@@ -30,7 +30,7 @@ validator(
       CancelOrderByOwner -> {
         let Transaction { inputs, extra_signatories, withdrawals, mint, .. } =
           transaction
-        expect order_datum: OrderDatum = raw_datum
+        expect order_datum: OrderDatum = raw_datum //HERE
         let OrderDatum { canceller, .. } = order_datum
         // Canceller can be one of 4 authorization methods
         utils.authorize_order_license(

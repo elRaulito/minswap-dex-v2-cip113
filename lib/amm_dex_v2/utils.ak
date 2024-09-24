@@ -507,11 +507,11 @@ pub fn value_to_list(val: Value) -> SortedValueList {
     |> value.to_dict
     |> dict.to_list
     |> list.map(
-         fn(e) {
-           let (k, v) = e
-           (k, dict.to_list(v))
-         },
-       )
+        fn(e) {
+          let (k, v) = e
+          (k, dict.to_list(v))
+        },
+      )
 }
 
 // Pool Author can be one of 3 authorization methods
@@ -555,9 +555,12 @@ pub fn authorize_order_license(
   transaction_mint: MintedValue,
 ) -> Bool {
   when author is {
+    //This case is the one someone wants to buy than changes his mind
     // If the authorization method is PubKey, validate using the provided signature.
     OAMSignature(pub_key_hash) -> list.has(extra_signatories, pub_key_hash)
     // If the authorization method is SpendScript, ensure the Utxo is present in the transaction inputs.
+    //In this case we want to ensure any token CIP113 goes back to the contract
+    //must be ensured by the CIP113 itself
     OAMSpendScript(script_hash) -> {
       let auth_cred = ScriptCredential(script_hash)
       list.any(
@@ -571,21 +574,7 @@ pub fn authorize_order_license(
         },
       )
     }
-    // If the authorization method is WithdrawScript, validate the presence of a withdrawal in the transaction.
-    OAMWithdrawScript(script_hash) -> {
-      let credential = Inline(ScriptCredential(script_hash))
-      dict.has_key(withdrawals, credential)
-    }
-    // If the authorization method is MintScript, ensure the minted tokens meet the policy ID requirements and have a non-zero quantity.
-    OAMMintScript(script_hash) -> {
-      let fst_token_quantity =
-        transaction_mint
-          |> value.from_minted_value()
-          |> value.tokens(script_hash)
-          |> dict.to_list()
-          |> builtin.head_list
-          |> builtin.snd_pair
-      fst_token_quantity != 0
-    }
+
+    _ -> False
   }
 }

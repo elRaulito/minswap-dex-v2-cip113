@@ -75,9 +75,7 @@ fn get_optimized_swap_output_value(
       // If the input value contains ADA and one additional asset, with Asset B being swapped for Asset A,
       // subtract the batcher fee and add the output amount to the ADA portion, then subtract the swap amount of Asset B.
       [(asset_pid, [(asset_tn, asset_amount)])] ->
-        if
-        !a_to_b && asset_pid == asset_b_policy_id && asset_tn == asset_b_asset_name{
-        
+        if !a_to_b && asset_pid == asset_b_policy_id && asset_tn == asset_b_asset_name {
           // Asset B have change
           if asset_amount > amount_in {
             Some(
@@ -312,6 +310,8 @@ fn validate_swap_exact_in(
             used_batcher_fee: used_batcher_fee,
           ),
           output: order_output,
+          asset_a,
+          asser_b,
         ),
       }
     pool_state
@@ -413,6 +413,8 @@ fn validate_swap_exact_out(
         receiver_datum: success_receiver_datum,
         value: expect_order_value_out,
         output: order_output,
+        asset_a,
+        asser_b,
       )
     if a_to_b_direction {
       (
@@ -442,6 +444,8 @@ fn validate_swap_exact_out(
             used_batcher_fee: used_batcher_fee,
           ),
           output: order_output,
+          asset_a,
+          asser_b,
         ),
       }
     pool_state
@@ -538,6 +542,8 @@ fn validate_deposit(
         receiver_datum: success_receiver_datum,
         value: expect_order_value_out,
         output: order_output,
+        asset_a,
+        asser_b,
       )
     (
       datum_reserve_a + deposit_amount_a - earned_fee_a,
@@ -557,6 +563,8 @@ fn validate_deposit(
             used_batcher_fee: used_batcher_fee,
           ),
           output: order_output,
+          asset_a,
+          asser_b,
         ),
       }
     pool_state
@@ -628,6 +636,8 @@ fn validate_withdraw(
         receiver_datum: success_receiver_datum,
         value: expect_order_value_out,
         output: order_output,
+        asset_a,
+        asser_b,
       )
     (
       datum_reserve_a - amount_a_out,
@@ -647,6 +657,8 @@ fn validate_withdraw(
             used_batcher_fee: used_batcher_fee,
           ),
           output: order_output,
+          asset_a,
+          asser_b,
         ),
       }
     pool_state
@@ -725,6 +737,8 @@ fn validate_zap_out(
         receiver_datum: success_receiver_datum,
         value: expect_order_value_out,
         output: order_output,
+        asset_a,
+        asser_b,
       )
     if a_to_b_direction {
       (
@@ -754,6 +768,8 @@ fn validate_zap_out(
             used_batcher_fee: used_batcher_fee,
           ),
           output: order_output,
+          asset_a,
+          asser_b,
         ),
       }
     pool_state
@@ -945,6 +961,8 @@ fn validate_withdraw_imbalance(
         receiver_datum: success_receiver_datum,
         value: expect_order_value_out,
         output: order_output,
+        asset_a,
+        asser_b,
       )
     (
       datum_reserve_a - amount_a_out - earned_fee_a,
@@ -964,6 +982,8 @@ fn validate_withdraw_imbalance(
             used_batcher_fee: used_batcher_fee,
           ),
           output: order_output,
+          asset_a,
+          asser_b,
         ),
       }
     pool_state
@@ -1219,6 +1239,8 @@ fn validate_order_output(
   receiver_datum: ExtraOrderDatum,
   value: Value,
   output: Output,
+  asset_a: Asset,
+  asset_b: Asset,
 ) -> Bool {
   let Output {
     address: output_address,
@@ -1233,14 +1255,18 @@ fn validate_order_output(
     }
   let Address { payment_credential: receiver_payment_cred, .. } = receiver
   when receiver_payment_cred is {
-    VerificationKeyCredential(_) -> is_correct_address_and_value
-    ScriptCredential(_) -> and {
+    ScriptCredential(hash) -> and {
         is_correct_address_and_value,
         is_valid_datum(
           raw_datum: raw_order_output_datum,
           extra_order_datum: receiver_datum,
         ),
+        or {
+          hash == asset_a.policy_id,
+          hash == asset_b.policy_id,
+        },
       }
+    _ -> False
   }
 }
 
@@ -1248,20 +1274,26 @@ fn validate_order_output_except_value(
   receiver: Address,
   receiver_datum: ExtraOrderDatum,
   output: Output,
+  asset_a: Asset,
+  asset_b: Asset,
 ) -> Bool {
   let Output { address: output_address, datum: raw_order_output_datum, .. } =
     output
 
   let Address { payment_credential: receiver_payment_cred, .. } = receiver
   when receiver_payment_cred is {
-    VerificationKeyCredential(_) -> receiver == output_address
-    ScriptCredential(_) -> and {
+    ScriptCredential(hash) -> and {
         receiver == output_address,
         is_valid_datum(
           raw_datum: raw_order_output_datum,
           extra_order_datum: receiver_datum,
         ),
+        or {
+          hash == asset_a.policy_id,
+          hash == asset_b.policy_id,
+        },
       }
+    _ -> False
   }
 }
 
